@@ -13,7 +13,7 @@
 | 이름 | GitHub | 역할 |
 |---|---|---|
 | 유영석 | github.com/yskstuff | 개발자 |
-| 유나연 |  | 개발자 |
+| 유나연 | github.com/yxxnxyxxn | 개발자 |
 
 ---
 
