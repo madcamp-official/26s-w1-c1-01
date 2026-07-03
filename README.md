@@ -12,8 +12,8 @@
 
 | 이름 | GitHub | 역할 |
 |---|---|---|
-| 유영석 | github.com/yskstuff | 개발자 |
-| 유나연 | github.com/yxxnxyxxn | 개발자 |
+| 유영석 | github.com/yskstuff | 기획 및 개발 |
+| 유나연 | github.com/yxxnxyxxn | 기획 및 개발 |
 
 ---
 
@@ -52,6 +52,7 @@
 > 서비스의 전체 페이지 구조와 페이지 간 이동 흐름; 각 페이지의 주요 UI 구성, 입력 요소, 버튼, 사용자 행동 흐름 등을 간단한 와이어프레임 형태로 정리
 
 <!-- Figma 링크 또는 이미지 첨부 -->
+https://www.figma.com/design/4ooRDmlXnvXvPLNMc5Qsol/%EB%85%B8%EB%A7%88%EB%93%9C%EB%A6%AC%EC%8A%A4%ED%8A%B8?node-id=1172182-91&t=V1JnXZO3Em8lQaQF-1
 
 ---
 
