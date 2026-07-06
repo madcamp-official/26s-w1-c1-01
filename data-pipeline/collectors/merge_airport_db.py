@@ -6,11 +6,14 @@ IATA를 기본키로 하는 공항 DB(csv)를 생성한다.
 스키마: IATA, Country, City, Name_kor, Name_eng
 """
 
+import os
+
 import pandas as pd
 
-OPENFLIGHTS_CSV = "openflights-export-2026-07-04-1120.csv"
-AIRPORT_CODE_CSV = "공항코드집.csv"
-OUTPUT_CSV = "airports.csv"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OPENFLIGHTS_CSV = os.path.join(BASE_DIR, "../data/raw/openflights-export-2026-07-04-1120.csv")
+AIRPORT_CODE_CSV = os.path.join(BASE_DIR, "../data/raw/공항코드집.csv")
+OUTPUT_CSV = os.path.join(BASE_DIR, "../data/processed/airports.csv")
 
 def main():
     flights = pd.read_csv(OPENFLIGHTS_CSV)
