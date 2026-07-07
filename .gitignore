@@ -15,5 +15,8 @@ data-pipeline/data/raw/
 data-pipeline/data/processed/
 data-pipeline/seeds/airportal_code.csv
 data-pipeline/seeds/bigmac_index.csv
+data-pipeline/data/README.md
 
 .DS_Store
+.mcp.json
+
