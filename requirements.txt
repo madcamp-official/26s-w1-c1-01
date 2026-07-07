@@ -1,0 +1,6 @@
+pandas
+requests
+python-dotenv
+psycopg2-binary
+playwright
+playwright-stealth
