@@ -13,6 +13,8 @@ data/processed/airports.csv(openflights 'To' 기준 ICN 취항 공항)에 등장
   대만, 인도 등)는 currency_code를 NULL로 두고 이후 통화 데이터가 보강되면 채운다.
 - alarm_level/special_advisory: scrapers/travel_alarm_scraper.py가 만든
   data/processed/travel_alarm.csv가 있으면 병합하고, 없으면 기본값(0, NULL)을 쓴다.
+  이 스크래퍼는 국가를 ISO 3166-1 alpha-3(iso_code)로 식별하므로, 외교부
+  표준코드의 ISO(3자리) 컬럼으로 country_id(alpha-2)와 연결한다.
 """
 
 import os
@@ -75,7 +77,8 @@ def main():
         "국가명(영문)": "name_en",
         "국가명(국문)": "name_ko",
         "ISO(2자리)": "country_id",
-    })[["country_id", "name_ko", "name_en"]].dropna(subset=["country_id"])
+        "ISO(3자리)": "iso3",
+    })[["country_id", "iso3", "name_ko", "name_en"]].dropna(subset=["country_id"])
 
     countries = target.merge(mofa, on="name_en", how="left")
     unmatched = countries[countries["country_id"].isna()]["airport_name"].tolist()
@@ -104,11 +107,13 @@ def main():
     countries["alarm_level"] = 0
     countries["special_advisory"] = None
     if os.path.exists(TRAVEL_ALARM_CSV):
-        alarms = pd.read_csv(TRAVEL_ALARM_CSV).rename(columns={"iso_alpha2": "country_id"})
-        countries = countries.merge(alarms, on="country_id", how="left", suffixes=("", "_scraped"))
+        alarms = pd.read_csv(TRAVEL_ALARM_CSV).rename(columns={"iso_alpha3": "iso3"})
+        countries = countries.merge(alarms, on="iso3", how="left", suffixes=("", "_scraped"))
         countries["alarm_level"] = countries["alarm_level_scraped"].fillna(0).astype(int)
         countries["special_advisory"] = countries["special_advisory_scraped"]
         countries = countries.drop(columns=["alarm_level_scraped", "special_advisory_scraped"])
+        no_alarm_data = countries[countries["special_advisory"].isna() & (countries["alarm_level"] == 0)]["country_id"].tolist()
+        print(f"여행경보 데이터 없어 alarm_level=0으로 둔 국가 {len(no_alarm_data)}개: {sorted(no_alarm_data)}")
     else:
         print(f"경고: {TRAVEL_ALARM_CSV}가 없어 alarm_level=0/special_advisory=NULL로 채웁니다.")
 
