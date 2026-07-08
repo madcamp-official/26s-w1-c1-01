@@ -13,10 +13,22 @@
 
 ## 팀원
 
-| 이름 | GitHub | 역할 |
-|---|---|---|
-| 유영석 | github.com/yskstuff | 개발자 |
-| 유나연 | github.com/yxxnxyxxn | 개발자 |
+<table>
+  <tr>
+    <td align="center">
+      <img src="img/유영석.png" width="120" height="120" alt="유영석" style="border-radius:50%; object-fit:cover;" /><br />
+      <b>유영석</b><br />
+      <a href="https://github.com/yskstuff">@yskstuff</a><br />
+      개발자
+    </td>
+    <td align="center">
+      <img src="img/유나연.jpeg" width="120" height="120" alt="유나연" style="border-radius:50%; object-fit:cover;" /><br />
+      <b>유나연</b><br />
+      <a href="https://github.com/yxxnxyxxn">@yxxnxyxxn</a><br />
+      개발자
+    </td>
+  </tr>
+</table>
 
 ---
 
