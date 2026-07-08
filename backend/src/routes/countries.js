@@ -15,6 +15,7 @@ router.get("/", async (req, res, next) => {
         c.alarm_level,
         c.special_advisory,
         c.currency_code,
+        c.big_mac_price,
         cur.exchange_rate,
         cur.unit
       FROM countries c
@@ -42,8 +43,7 @@ function toCountryDto(row) {
     currencyCode: row.currency_code,
     exchangeRate: row.exchange_rate != null ? Number(row.exchange_rate) : null,
     unit: row.unit != null ? Number(row.unit) : null,
-    // bigMac: 빅맥지수 연동 스크래퍼/컬럼이 아직 없어 항상 null.
-    bigMac: null,
+    bigMac: row.big_mac_price != null ? Number(row.big_mac_price) : null,
   };
 }
 
