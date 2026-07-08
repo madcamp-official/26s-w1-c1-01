@@ -1,42 +1,54 @@
 """
-finance.naver.com/marketindex/exchangeDetail.naver?marketindexCd=FX_{통화코드}KRW
-페이지에서 실시간 매매기준율(KRW 기준)을 수집해 data/processed/exchange_rates.csv 로
-저장한다. 인증키가 필요 없어 한국수출입은행 API와 달리 .env 설정이 불필요하다.
+m.stock.naver.com/marketindex/exchange/FX_{통화코드}KRW 모바일 페이지가 내부적으로
+호출하는 JSON API(api.stock.naver.com/marketindex/exchange/FX_{통화코드}KRW)에서
+실시간 매매기준율(KRW 기준)을 수집해 Supabase currencies 테이블에 바로 upsert한다.
+CSV 등 중간 파일을 거치지 않으며, 인증키가 필요 없어 한국수출입은행 API와 달리
+EXIM_AUTH_KEY 설정이 불필요하다(SUPABASE_DB_URL만 필요).
 
-네이버는 현재가를 이미지가 아니라 자릿수마다 <span class="no3">3</span>처럼 쪼갠
-텍스트로 그리므로(첫 <p class="no_today"> 블록), no%d/jum(소수점)/shim(천단위 콤마)
-span의 텍스트를 순서대로 이어붙여 숫자로 만든다.
+HTML을 파싱하던 예전 finance.naver.com 방식과 달리 이 API는 exchangeInfo.closePrice에
+현재가를 바로 JSON 숫자 문자열(천단위 콤마 포함, 예: "1,506.70")로 내려주므로 콤마만
+제거하면 된다.
+
+1단위 가치가 낮아 하나은행이 100단위로 고시하는 통화(JPY/IDR/VND)는 exchangeInfo.fullName이
+"일본 JPY 100"처럼 " 100"으로 끝나는 것으로 실측 확인했다. 이를 이용해 하드코딩 없이
+100단위 고시 여부를 응답에서 직접 판별해 unit 컬럼에 담는다. exchange_rate는 closePrice를
+그대로 저장하며(1단위로 나누지 않음), exchange_scrapers.py/build_currencies.py와 동일하게
+"unit당 exchange_rate원" 컨벤션을 따른다(예: unit=100, exchange_rate=927.46 ->
+100엔=927.46원). frontend가 이 unit을 그대로 표시 라벨로 쓰므로 임의로 정규화하면 안 된다.
 
 같은 이유로 이 API는 국가명을 안 주고 통화 단위명만 주는 계산기 위젯 API
 (m.search.naver.com/.../qapirender.nhn)보다 취급 통화가 더 넓다 - 계산기 API에서는
 빠졌던 피지(FJD)/케냐(KES)/스리랑카(LKR)/미얀마(MMK)/우즈베키스탄(UZS)/캄보디아(KHR)도
-여기서는 조회된다. 다만 라오스(LAK)는 marketindexCd 자체가 없어(빈 기본 페이지로
-빠짐) 이 방식으로도 못 채운다.
+여기서는 조회된다. 다만 라오스(LAK)는 marketindexCd 자체가 없어(404 대신 409
+StockConflict 응답) 이 방식으로도 못 채운다.
 """
 
-import csv
 import os
-import re
 import time
 from datetime import datetime
 
+import psycopg2
 import requests
+from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, "../.env"))
 
-DETAIL_URL = "https://finance.naver.com/marketindex/exchangeDetail.naver"
-OUTPUT_CSV = os.path.join(BASE_DIR, "../data/processed/exchange_rates.csv")
+EXCHANGE_URL = "https://api.stock.naver.com/marketindex/exchange/FX_{code}KRW"
+DB_URL = os.environ.get("SUPABASE_DB_URL")
 REQUEST_DELAY_SEC = 0.3
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
-RATE_BLOCK_RE = re.compile(r'<p class="no_today">(.*?)</p>', re.S)
-DIGIT_SPAN_RE = re.compile(r'<span class="(?:no\d|jum|shim)">([^<]*)</span>')
-
-# 1단위 가치가 낮아 하나은행이 100단위로 고시하는 통화. 이 페이지는 EXIM API의
-# cur_unit("JPY(100)")처럼 고시 단위를 텍스트로 알려주지 않으므로 직접 나열해서
-# 1단위 기준으로 환산한다. 다른 저가치 통화(MMK/KHR/UZS/MNT 등)는 그대로 1단위로
-# 고시되는 것을 실측으로 확인했다.
-PER_100_CURRENCIES = {"JPY", "IDR", "VND"}
+UPSERT_SQL = '''
+    INSERT INTO currencies (currency_code, currency_name, unit, exchange_rate, base_date, updated_at)
+    VALUES (%(currencyCode)s, %(currencyName)s, %(unit)s, %(exchangeRate)s, %(baseDate)s, now())
+    ON CONFLICT (currency_code) DO UPDATE SET
+        currency_name = EXCLUDED.currency_name,
+        unit          = EXCLUDED.unit,
+        exchange_rate = EXCLUDED.exchange_rate,
+        base_date     = EXCLUDED.base_date,
+        updated_at    = EXCLUDED.updated_at
+'''
 
 CURRENCY_NAMES = {
     "AED": "아랍에미리트 디르함",
@@ -85,47 +97,41 @@ CURRENCY_NAMES = {
 
 
 def fetch_rate(currency_code):
-    """currency_code 1단위가 몇 원인지 조회한다. marketindexCd가 없는 통화는
-    빈 기본 페이지가 내려와 no_today 블록을 못 찾으므로 None을 반환한다."""
+    """currency_code의 (고시 단위, 그 단위당 원화 매매기준율)을 조회한다.
+    marketindexCd가 없는 통화는 409 StockConflict가 내려오므로 None을 반환한다."""
     if currency_code == "KRW":
-        return 1.0
+        return 1, 1.0
 
     response = requests.get(
-        DETAIL_URL,
-        params={"marketindexCd": f"FX_{currency_code}KRW"},
+        EXCHANGE_URL.format(code=currency_code),
         headers=HEADERS,
         timeout=10,
     )
+    if response.status_code == 409:
+        return None
     response.raise_for_status()
-    response.encoding = "euc-kr"
 
-    block = RATE_BLOCK_RE.search(response.text)
-    if not block:
-        return None
+    info = response.json()["exchangeInfo"]
+    rate = float(info["closePrice"].replace(",", ""))
+    unit = 100 if (info.get("fullName") or "").endswith(" 100") else 1
 
-    digits = "".join(DIGIT_SPAN_RE.findall(block.group(1))).replace(",", "")
-    if not digits:
-        return None
-
-    rate = float(digits)
-    if currency_code in PER_100_CURRENCIES:
-        rate /= 100
-
-    return rate
+    return unit, rate
 
 
 def fetch_latest_rates():
-    today = datetime.now().strftime("%Y%m%d")
+    today = datetime.now().date()
 
     result = []
     for code, name in CURRENCY_NAMES.items():
-        rate = fetch_rate(code)
-        if rate is None:
+        fetched = fetch_rate(code)
+        if fetched is None:
             print(f"환율 조회 실패, 건너뜀: {code}")
         else:
+            unit, rate = fetched
             result.append({
                 "currencyCode": code,
                 "currencyName": name,
+                "unit": unit,
                 "exchangeRate": rate,
                 "baseDate": today,
             })
@@ -135,17 +141,22 @@ def fetch_latest_rates():
 
 
 def main():
+    if not DB_URL:
+        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
+
     today, result = fetch_latest_rates()
     if not result:
         raise RuntimeError("조회된 환율 데이터가 없습니다.")
 
-    os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=["currencyCode", "currencyName", "exchangeRate", "baseDate"])
-        writer.writeheader()
-        writer.writerows(result)
+    conn = psycopg2.connect(DB_URL)
+    try:
+        with conn.cursor() as cur:
+            cur.executemany(UPSERT_SQL, result)
+        conn.commit()
+    finally:
+        conn.close()
 
-    print(f"저장 완료: {OUTPUT_CSV} ({len(result)}개 통화, 기준일 {today})")
+    print(f"Supabase currencies 테이블 upsert 완료 ({len(result)}개 통화, 기준일 {today})")
 
 
 if __name__ == "__main__":

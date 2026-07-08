@@ -8,7 +8,7 @@ scrapers/collectors의 기존 스크립트를 모듈로 그대로 불러와 main
 DB 반영 단계는 건너뛰고(반영할 DataFrame 자체가 없으므로) 나머지 카테고리는 계속 진행한다.
 
 실행 순서:
-  1. 환율: exchange_scrapers.py(API -> exchange.csv) -> build_currencies.py(CSV -> currencies upsert)
+  1. 환율: exchange_rate_scraper.py(네이버 API -> currencies upsert, CSV 미경유)
   2. 항공권: flight_scraper.py(스크래핑 -> DataFrame) -> build_flights.py(DataFrame -> flight_price_scrapes upsert)
   3. 숙박: stay_scraper.py(스크래핑 -> DataFrame) -> build_stay.py(DataFrame -> stay_price_scrapes upsert)
   4. cities.flight_price/stay_price 캐시 반영: sync_city_prices.py (2, 3 중 하나라도 로그가 쌓였으면 실행)
@@ -33,11 +33,10 @@ sys.path.insert(0, os.path.join(BASE_DIR, "collectors"))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 DB_URL = os.environ.get("SUPABASE_DB_URL")
 
-import build_currencies  # noqa: E402
 import build_flights  # noqa: E402
 import build_stay  # noqa: E402
 import build_travel_alarm  # noqa: E402
-import exchange_scrapers  # noqa: E402
+import exchange_rate_scraper  # noqa: E402
 import flight_scraper  # noqa: E402
 import stay_scraper  # noqa: E402
 import sync_city_prices  # noqa: E402
@@ -60,8 +59,7 @@ def run_step(label, func):
 
 
 def main():
-    if run_step("환율 스크래핑 (exchange_scrapers)", exchange_scrapers.main)[0]:
-        run_step("환율 DB 반영 (build_currencies)", build_currencies.main)
+    run_step("환율 스크래핑 + DB 반영 (exchange_rate_scraper)", exchange_rate_scraper.main)
 
     flight_ok, flight_df = run_step("항공권 병렬 스크래핑 (flight_scraper)", flight_scraper.main_parallel)
     if flight_ok:
