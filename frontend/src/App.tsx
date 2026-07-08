@@ -4,6 +4,7 @@ import SearchBar from './components/SearchBar';
 import PricePanel from './components/PricePanel';
 import CityDetailPanel from './components/CityDetailPanel';
 import RecommendQuiz from './components/RecommendQuiz';
+import HelpPanel from './components/HelpPanel';
 import { useCitiesData, useCountriesData } from './queries/useCitiesData';
 import { useAppStore } from './store/useAppStore';
 import { pickRandomCity } from './utils/random';
@@ -28,6 +29,7 @@ function App() {
   const selectCity = useAppStore((s) => s.selectCity);
   const resetToDefaultView = useAppStore((s) => s.resetToDefaultView);
   const [quizOpen, setQuizOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const lastRandomCityId = useRef<string | null>(null);
 
   const countryById = useMemo(
@@ -116,6 +118,12 @@ function App() {
             <div className="pointer-events-auto flex gap-2 max-[768px]:justify-end">
               <button
                 className="whitespace-nowrap rounded-full border border-white/15 bg-[#14161e]/75 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:border-sky-300"
+                onClick={() => setHelpOpen(true)}
+              >
+                도움말
+              </button>
+              <button
+                className="whitespace-nowrap rounded-full border border-white/15 bg-[#14161e]/75 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:border-sky-300"
                 onClick={() => setQuizOpen(true)}
               >
                 추천
@@ -132,6 +140,7 @@ function App() {
           {quizOpen && (
             <RecommendQuiz cities={cities} onClose={() => setQuizOpen(false)} onSelectCity={selectCity} />
           )}
+          {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
 
           {selectedCountry && !selectedCity && (
             <div className="absolute left-7 top-24 z-10 flex flex-col rounded-2xl border border-white/10 bg-[#14161e]/75 px-5 py-3 backdrop-blur-md">

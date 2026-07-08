@@ -116,7 +116,9 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
             </div>
             <p className="m-0 mb-3 text-sm leading-relaxed text-white/70">{alarm.description}</p>
             <p className="m-0 mb-3 text-xs leading-relaxed text-white/40">
-              국가 단위로 표시되는 경보이며, 실제로는 국가 내 특정 지역에만 해당하는 경우가 있습니다. 자세한 지역별 기준은 외교부 해외안전여행 웹사이트에서 확인하세요.
+              이 정보는 특정 지역이 아닌 국가 단위로 집계된 정보입니다. 표시된 등급은 국가 내 여행경보 중 가장 높은
+              단계를 기준으로 하며, 국가 전체가 이 등급이라는 뜻이 아니라 국가 내에 이 등급에 해당하는 지역이
+              포함되어 있다는 의미입니다. 지역별 정확한 경보는 외교부 해외안전여행 웹사이트에서 확인하세요.
             </p>
 
             {country?.specialAdvisory && (
