@@ -38,20 +38,3 @@ export async function fetchCountries(): Promise<Country[]> {
     bigMac: row.bigMac ?? undefined,
   }));
 }
-
-/**
- * 도시 선택 시 백엔드에 해당 도시의 항공권/숙박비 재계산을 요청한다.
- * 계산 결과는 이 응답으로 받지 않는다 — 백엔드가 갱신해두면 이후의 GET /cities에서
- * 새 값이 내려오는 흐름을 전제로 한 fire-and-forget 트리거다. 그래서 실패해도
- * 화면에는 영향이 없고(기존 값으로 계속 동작), 별도 재시도도 하지 않는다.
- * 엔드포인트 경로는 백엔드와 협의해 여기 한 곳만 바꾸면 된다.
- */
-export async function requestCityCostUpdate(cityId: string): Promise<void> {
-  // 목업 단계(VITE_API_BASE_URL 미설정)에서는 조용히 아무것도 하지 않는다.
-  if (!API_BASE_URL) return;
-  try {
-    await fetch(`${API_BASE_URL}/cities/${encodeURIComponent(cityId)}/update`, { method: 'POST' });
-  } catch {
-    // 네트워크 실패는 치명적이지 않다 — 다음 도시 선택에서 자연스럽게 다시 시도된다.
-  }
-}

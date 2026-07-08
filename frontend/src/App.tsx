@@ -7,7 +7,6 @@ import RecommendQuiz from './components/RecommendQuiz';
 import { useCitiesData, useCountriesData } from './queries/useCitiesData';
 import { useAppStore } from './store/useAppStore';
 import { pickRandomCity } from './utils/random';
-import { requestCityCostUpdate } from './queries/api';
 
 function App() {
   const {
@@ -64,13 +63,6 @@ function App() {
       window.removeEventListener('wheel', preventPageZoom);
     };
   }, []);
-
-  // 도시가 선택될 때마다(핀 클릭/검색/퀴즈/랜덤 — 전부 selectedCityId 변경으로 수렴)
-  // 백엔드에 그 도시의 항공권/숙박비 재계산을 트리거한다. 같은 도시를 다시 선택하는
-  // 경우는 effect가 재실행되지 않아 중복 요청이 자연스럽게 걸러진다.
-  useEffect(() => {
-    if (selectedCityId) requestCityCostUpdate(selectedCityId);
-  }, [selectedCityId]);
 
   function handleRandom() {
     if (!cities) return;
