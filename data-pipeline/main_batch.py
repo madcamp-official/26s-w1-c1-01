@@ -23,9 +23,15 @@ import logging
 import os
 import sys
 
+import psycopg2
+from dotenv import load_dotenv
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "scrapers"))
 sys.path.insert(0, os.path.join(BASE_DIR, "collectors"))
+
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+DB_URL = os.environ.get("SUPABASE_DB_URL")
 
 import build_currencies  # noqa: E402
 import build_flights  # noqa: E402
@@ -57,11 +63,11 @@ def main():
     if run_step("환율 스크래핑 (exchange_scrapers)", exchange_scrapers.main)[0]:
         run_step("환율 DB 반영 (build_currencies)", build_currencies.main)
 
-    flight_ok, flight_df = run_step("항공권 스크래핑 (flight_scraper)", flight_scraper.main)
+    flight_ok, flight_df = run_step("항공권 병렬 스크래핑 (flight_scraper)", flight_scraper.main_parallel)
     if flight_ok:
         run_step("항공권 DB 반영 (build_flights)", lambda: build_flights.main(flight_df))
 
-    stay_ok, stay_df = run_step("숙박 스크래핑 (stay_scraper)", stay_scraper.main)
+    stay_ok, stay_df = run_step("숙박 병렬 스크래핑 (stay_scraper)", stay_scraper.main_parallel)
     if stay_ok:
         run_step("숙박 DB 반영 (build_stay)", lambda: build_stay.main(stay_df))
 
@@ -76,26 +82,58 @@ def run_for_city(city_id):
 
     전체 배치(main)와 달리 환율은 도시 단위가 아니라 건너뛰고, 항공권/숙박
     스크래핑 -> DB 반영 -> cities 캐시 동기화 -> 여행경보 갱신만 city_id로
-    스코프를 좁혀 수행한다.
+    스코프를 좁혀 수행한다. 도시가 하나뿐이면 main_parallel이 내부적으로
+    프로세스 풀 없이 곧바로 처리해 main()과 동일하게 동작한다(오버헤드 없음).
+
+    단일 도시 갱신이라 아래 다섯 단계(목적지/도시 목록 조회 2회, 로그 upsert 2회,
+    캐시 동기화, 여행경보 조회+갱신)가 각자 커넥션을 새로 여는 대신 커넥션 하나를
+    공유한다. 공유 커넥션은 autocommit으로 열어, 단계별로 원래 있던 개별 commit
+    경계를 그대로 유지한다(각 단계는 서로 독립적으로 재실행 가능한 upsert/UPDATE라
+    autocommit으로 나눠 커밋해도 안전하다).
     """
     logging.info(f"=== 단일 도시 배치 시작: {city_id} ===")
 
-    flight_ok, flight_df = run_step(
-        f"[{city_id}] 항공권 스크래핑 (flight_scraper)", lambda: flight_scraper.main(city_id)
-    )
-    if flight_ok:
-        run_step(f"[{city_id}] 항공권 DB 반영 (build_flights)", lambda: build_flights.main(flight_df, city_id))
+    conn = None
+    if DB_URL:
+        conn = psycopg2.connect(DB_URL)
+        conn.autocommit = True
+    else:
+        logging.warning("SUPABASE_DB_URL이 설정되어 있지 않아 각 단계가 자체적으로 커넥션을 엽니다.")
 
-    stay_ok, stay_df = run_step(
-        f"[{city_id}] 숙박 스크래핑 (stay_scraper)", lambda: stay_scraper.main(city_id)
-    )
-    if stay_ok:
-        run_step(f"[{city_id}] 숙박 DB 반영 (build_stay)", lambda: build_stay.main(stay_df, city_id))
+    try:
+        flight_ok, flight_df = run_step(
+            f"[{city_id}] 항공권 스크래핑 (flight_scraper)",
+            lambda: flight_scraper.main_parallel(city_id, conn=conn),
+        )
+        if flight_ok:
+            run_step(
+                f"[{city_id}] 항공권 DB 반영 (build_flights)",
+                lambda: build_flights.main(flight_df, city_id, conn=conn),
+            )
 
-    if flight_ok or stay_ok:
-        run_step(f"[{city_id}] cities 캐시 동기화 (sync_city_prices)", lambda: sync_city_prices.main(city_id))
+        stay_ok, stay_df = run_step(
+            f"[{city_id}] 숙박 스크래핑 (stay_scraper)",
+            lambda: stay_scraper.main_parallel(city_id, conn=conn),
+        )
+        if stay_ok:
+            run_step(
+                f"[{city_id}] 숙박 DB 반영 (build_stay)",
+                lambda: build_stay.main(stay_df, city_id, conn=conn),
+            )
 
-    run_step(f"[{city_id}] 여행경보 갱신 (build_travel_alarm)", lambda: build_travel_alarm.main(city_id))
+        if flight_ok or stay_ok:
+            run_step(
+                f"[{city_id}] cities 캐시 동기화 (sync_city_prices)",
+                lambda: sync_city_prices.main(city_id, conn=conn),
+            )
+
+        run_step(
+            f"[{city_id}] 여행경보 갱신 (build_travel_alarm)",
+            lambda: build_travel_alarm.main(city_id, conn=conn),
+        )
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 if __name__ == "__main__":

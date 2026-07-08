@@ -19,12 +19,12 @@ import os
 import sys
 
 import pandas as pd
-import psycopg2
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRAPERS_DIR = os.path.join(BASE_DIR, "../scrapers")
 sys.path.insert(0, SCRAPERS_DIR)
+from _db import get_connection  # noqa: E402
 from travel_alarm_scraper import fetch_all_alarms, summarize_alarm  # noqa: E402
 
 load_dotenv(os.path.join(BASE_DIR, "../.env"))
@@ -80,54 +80,52 @@ def build_rows():
     return rows
 
 
-def get_country_id_for_city(city_id):
-    if not DB_URL:
-        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
-
-    conn = psycopg2.connect(DB_URL)
+def get_country_id_for_city(city_id, conn=None):
+    connection, owns_conn = get_connection(DB_URL, conn)
     try:
-        with conn.cursor() as cur:
+        with connection.cursor() as cur:
             cur.execute("SELECT country_id FROM cities WHERE city_id = %s", (city_id,))
             row = cur.fetchone()
     finally:
-        conn.close()
+        if owns_conn:
+            connection.close()
 
     return row[0] if row else None
 
 
-def update_countries(rows):
-    if not DB_URL:
-        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
-
-    conn = psycopg2.connect(DB_URL)
+def update_countries(rows, conn=None):
+    connection, owns_conn = get_connection(DB_URL, conn)
     updated = 0
     try:
-        with conn.cursor() as cur:
+        with connection.cursor() as cur:
             for row in rows:
                 cur.execute(UPDATE_SQL, row)
                 updated += cur.rowcount
-        conn.commit()
+        if owns_conn:
+            connection.commit()
     finally:
-        conn.close()
+        if owns_conn:
+            connection.close()
 
     return updated
 
 
-def main(city_id=None):
+def main(city_id=None, conn=None):
     """city_id를 주면 해당 도시가 속한 국가 하나만 갱신한다.
 
     여행경보 API 자체가 국가 단위 조회만 지원해 전체 목록은 그대로 받아오지만,
-    DB에는 city_id로 찾은 country_id에 해당하는 국가만 반영한다.
+    DB에는 city_id로 찾은 country_id에 해당하는 국가만 반영한다. conn을 주면
+    커넥션을 재사용한다(main_batch.run_for_city 참고).
     """
     rows = build_rows()
 
     if city_id:
-        country_id = get_country_id_for_city(city_id)
+        country_id = get_country_id_for_city(city_id, conn=conn)
         if not country_id:
             raise ValueError(f"알 수 없는 도시 코드: {city_id}")
         rows = [row for row in rows if row["country_id"] == country_id]
 
-    updated = update_countries(rows)
+    updated = update_countries(rows, conn=conn)
     print(f"Supabase countries 테이블 여행경보 갱신 완료 (대상 {len(rows)}개국 중 {updated}개국 값 변경)")
 
 
