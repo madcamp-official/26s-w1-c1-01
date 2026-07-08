@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+      - data-pipeline/.env
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
