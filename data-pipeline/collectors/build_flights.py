@@ -65,9 +65,12 @@ UPSERT_SQL = '''
 '''
 
 
-def load_rows(csv_path=INPUT_CSV):
+def load_rows(csv_path=INPUT_CSV, city_id=None):
     with open(csv_path, encoding="utf-8-sig") as f:
         rows = list(csv.DictReader(f))
+
+    if city_id:
+        rows = [row for row in rows if row["city_id"] == city_id]
 
     for row in rows:
         row["price"] = int(row["price"]) if row["price"] else None
@@ -77,11 +80,12 @@ def load_rows(csv_path=INPUT_CSV):
     return rows
 
 
-def main():
+def main(city_id=None):
+    """city_id를 주면 CSV에서 해당 도시 로그만 upsert한다."""
     if not DB_URL:
         raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
 
-    rows = load_rows()
+    rows = load_rows(city_id=city_id)
 
     conn = psycopg2.connect(DB_URL)
     try:
