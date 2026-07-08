@@ -1,0 +1,16 @@
+**/node_modules
+**/__pycache__
+**/.env
+.git
+
+# 프론트는 별도 Dockerfile(frontend/Dockerfile)과 빌드 컨텍스트로 빌드하므로
+# backend+data-pipeline 이미지에는 넣지 않는다.
+frontend
+
+# 스크래핑 원본/가공 데이터, 로그는 이미지에 안 넣는다 (용량 + 빌드 캐시 무효화 방지)
+data-pipeline/data/raw
+data-pipeline/data/processed
+data-pipeline/logs
+
+*.log
+.DS_Store
