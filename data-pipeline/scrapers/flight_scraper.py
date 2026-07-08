@@ -94,8 +94,14 @@ def append_rows(rows):
         writer.writerows(rows)
 
 
-def main():
+def main(city_id=None):
+    """city_id를 주면 해당 목적지 하나만, 없으면 전체 목적지를 스크래핑한다."""
     destinations = load_destinations()
+    if city_id:
+        if city_id not in destinations:
+            raise ValueError(f"알 수 없는 목적지 코드: {city_id}")
+        destinations = [city_id]
+
     scrape_date = datetime.now().strftime("%Y-%m-%d")
     depart_date, return_date = get_search_dates()
     depart_iso = datetime.strptime(depart_date, "%Y%m%d").date().isoformat()

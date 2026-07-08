@@ -164,9 +164,15 @@ def append_rows(rows):
         writer.writerows(rows)
 
 
-def main():
+def main(city_id=None):
+    """city_id를 주면 해당 도시 하나만, 없으면 전체 도시를 스크래핑한다."""
     checkin, checkout = get_hotel_dates()
     cities = load_cities()
+    if city_id:
+        cities = [c for c in cities if c[0] == city_id]
+        if not cities:
+            raise ValueError(f"알 수 없는 도시 코드: {city_id}")
+
     logging.info(f"{len(cities)}개 도시 숙박 최저가 스크래핑 시작 ({checkin} ~ {checkout})")
 
     results_by_name = {}

@@ -33,6 +33,7 @@ SYNC_FLIGHT_PRICE_SQL = '''
     ) latest
     WHERE c.city_id = latest.city_id
       AND c.flight_price IS DISTINCT FROM latest.price
+      AND (%(city_id)s IS NULL OR c.city_id = %(city_id)s)
 '''
 
 SYNC_STAY_PRICE_SQL = '''
@@ -47,19 +48,21 @@ SYNC_STAY_PRICE_SQL = '''
     ) latest
     WHERE c.city_id = latest.city_id
       AND c.stay_price IS DISTINCT FROM latest.price
+      AND (%(city_id)s IS NULL OR c.city_id = %(city_id)s)
 '''
 
 
-def main():
+def main(city_id=None):
+    """city_id를 주면 해당 도시의 캐시만 동기화한다."""
     if not DB_URL:
         raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
 
     conn = psycopg2.connect(DB_URL)
     try:
         with conn.cursor() as cur:
-            cur.execute(SYNC_FLIGHT_PRICE_SQL)
+            cur.execute(SYNC_FLIGHT_PRICE_SQL, {"city_id": city_id})
             flight_updated = cur.rowcount
-            cur.execute(SYNC_STAY_PRICE_SQL)
+            cur.execute(SYNC_STAY_PRICE_SQL, {"city_id": city_id})
             stay_updated = cur.rowcount
         conn.commit()
     finally:
