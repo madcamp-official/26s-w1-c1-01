@@ -15,6 +15,9 @@ router.get("/", async (req, res, next) => {
         c.alarm_level,
         c.special_advisory,
         c.currency_code,
+        c.big_mac_price,
+        c.image_url,
+        c.image_credit,
         cur.exchange_rate,
         cur.unit
       FROM countries c
@@ -28,8 +31,6 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// currencies.exchange_rate는 unit(고시 단위, 예: JPY는 100) 기준 원화값이라
-// 프론트 표시용으로는 1단위당 원화로 나눠서 내려준다.
 function toCountryDto(row) {
   return {
     countryId: row.country_id,
@@ -42,10 +43,11 @@ function toCountryDto(row) {
     alarmLevel: row.alarm_level,
     specialAdvisory: row.special_advisory,
     currencyCode: row.currency_code,
-    exchangeRate:
-      row.exchange_rate != null ? Number(row.exchange_rate) / row.unit : null,
-    // bigMac: 빅맥지수 연동 스크래퍼/컬럼이 아직 없어 항상 null.
-    bigMac: null,
+    exchangeRate: row.exchange_rate != null ? Number(row.exchange_rate) : null,
+    unit: row.unit != null ? Number(row.unit) : null,
+    bigMac: row.big_mac_price != null ? Number(row.big_mac_price) : null,
+    imageUrl: row.image_url,
+    imageCredit: row.image_credit,
   };
 }
 

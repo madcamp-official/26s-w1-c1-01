@@ -13,8 +13,9 @@ flight_price_scrapes / stay_price_scrapes 로그 테이블에서 도시별 최�
 
 import os
 
-import psycopg2
 from dotenv import load_dotenv
+
+from _db import get_connection
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, "../.env"))
@@ -33,6 +34,7 @@ SYNC_FLIGHT_PRICE_SQL = '''
     ) latest
     WHERE c.city_id = latest.city_id
       AND c.flight_price IS DISTINCT FROM latest.price
+      AND (%(city_id)s IS NULL OR c.city_id = %(city_id)s)
 '''
 
 SYNC_STAY_PRICE_SQL = '''
@@ -47,23 +49,27 @@ SYNC_STAY_PRICE_SQL = '''
     ) latest
     WHERE c.city_id = latest.city_id
       AND c.stay_price IS DISTINCT FROM latest.price
+      AND (%(city_id)s IS NULL OR c.city_id = %(city_id)s)
 '''
 
 
-def main():
-    if not DB_URL:
-        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
+def main(city_id=None, conn=None):
+    """city_id를 주면 해당 도시의 캐시만 동기화한다.
 
-    conn = psycopg2.connect(DB_URL)
+    conn을 주면 커넥션을 재사용한다(main_batch.run_for_city 참고).
+    """
+    connection, owns_conn = get_connection(DB_URL, conn)
     try:
-        with conn.cursor() as cur:
-            cur.execute(SYNC_FLIGHT_PRICE_SQL)
+        with connection.cursor() as cur:
+            cur.execute(SYNC_FLIGHT_PRICE_SQL, {"city_id": city_id})
             flight_updated = cur.rowcount
-            cur.execute(SYNC_STAY_PRICE_SQL)
+            cur.execute(SYNC_STAY_PRICE_SQL, {"city_id": city_id})
             stay_updated = cur.rowcount
-        conn.commit()
+        if owns_conn:
+            connection.commit()
     finally:
-        conn.close()
+        if owns_conn:
+            connection.close()
 
     print(f"cities.flight_price 갱신: {flight_updated}행")
     print(f"cities.stay_price 갱신: {stay_updated}행")
