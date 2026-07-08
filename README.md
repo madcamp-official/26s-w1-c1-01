@@ -13,6 +13,8 @@
 
 ## 팀원
 
+<div align="center">
+
 <table>
   <tr>
     <td align="center">
@@ -29,6 +31,8 @@
     </td>
   </tr>
 </table>
+
+</div>
 
 ---
 
@@ -173,12 +177,16 @@
 
 ## 기술 스택
 
+<div align="center">
+
 | 영역 | 언어 |
 |---|---|
 | Frontend | TypeScript (React) |
 | Backend | JavaScript (Node.js / Express) |
 | Data Pipeline | Python |
 | DB | PostgreSQL (Supabase) |
+
+</div>
 
 ---
 
@@ -201,6 +209,8 @@ cp data-pipeline/.env.example data-pipeline/.env
 
 **backend/.env**
 
+<div align="center">
+
 | 변수 | 설명 |
 |---|---|
 | `PORT` | Express 포트 (기본 4000) |
@@ -209,13 +219,21 @@ cp data-pipeline/.env.example data-pipeline/.env
 | `PYTHON_BIN` | `POST /cities/:id/update`가 실행할 python 실행 파일 |
 | `DATA_PIPELINE_DIR` | data-pipeline 디렉토리 경로 (미설정 시 `../data-pipeline`) |
 
+</div>
+
 **frontend/.env**
+
+<div align="center">
 
 | 변수 | 설명 |
 |---|---|
 | `VITE_API_BASE_URL` | backend 주소. 미설정 시 목업 데이터로 동작 |
 
+</div>
+
 **data-pipeline/.env**
+
+<div align="center">
 
 | 변수 | 설명 |
 |---|---|
@@ -223,11 +241,15 @@ cp data-pipeline/.env.example data-pipeline/.env
 | `MOFA_TRAVEL_ALARM_KEY` | 공공데이터포털 외교부 해외안전여행경보 API 인증키 |
 | `SUPABASE_DB_URL` | Supabase Postgres 연결 문자열 (backend의 `DATABASE_URL`과 동일 값) |
 
+</div>
+
 ---
 
 ## API 문서
 
 Base URL: `http://localhost:4000`
+
+<div align="center">
 
 | Method | Endpoint | 설명 | 응답 |
 |---|---|---|---|
@@ -235,6 +257,8 @@ Base URL: `http://localhost:4000`
 | GET | `/countries` | 국가 목록 (환율/여행경보/빅맥지수 포함) | `Country[]` |
 | GET | `/cities` | 국제공항 보유 도시 목록 (식비/항공권/숙박 최저가 포함) | `City[]` |
 | POST | `/cities/:cityId/update` | 특정 도시 데이터 갱신 트리거 (fire-and-forget) | `202` / `404` / `429` |
+
+</div>
 
 **Country**: `countryId, nameKo, nameEn, center{lat,lng}, alarmLevel(0~4), specialAdvisory, currencyCode, exchangeRate, unit, bigMac`
 
@@ -256,6 +280,8 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 
 ### currencies
 
+<div align="center">
+
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
 | `currency_code` | `CHAR(3)` PK | ISO 4217 |
@@ -265,7 +291,11 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 | `base_date` | `DATE` | 고시 기준일 |
 | `updated_at` | `TIMESTAMPTZ` | 갱신 시각 |
 
+</div>
+
 ### countries
+
+<div align="center">
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
@@ -279,7 +309,11 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 | `big_mac_price` | `INTEGER` | KRW 환산 빅맥지수 |
 | `updated_at` | `TIMESTAMPTZ` | 갱신 시각 |
 
+</div>
+
 ### cities
+
+<div align="center">
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
@@ -292,9 +326,13 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 | `stay_price` | `INTEGER` | KRW, 7박 총액 |
 | `updated_at` | `TIMESTAMPTZ` | 갱신 시각 |
 
+</div>
+
 ### flight_price_scrapes / stay_price_scrapes
 
 스크래핑 원본 로그. `cities`의 최저가 캐시는 이 로그의 최신값을 배치가 뽑아 덮어쓴 값이다.
+
+<div align="center">
 
 | 컬럼 | 타입 | 설명 |
 | --- | --- | --- |
@@ -305,6 +343,8 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 | `price` | `INTEGER` | 실패 시 NULL |
 | `airline` / `source_url` | `VARCHAR` / `TEXT` | 최저가 항공사, 예약 링크 |
 | `scraped_at` | `TIMESTAMPTZ` | |
+
+</div>
 
 ---
 
