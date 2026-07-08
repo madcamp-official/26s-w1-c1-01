@@ -12,6 +12,7 @@ const FALLBACK_FIT_ALTITUDE = 2;
 type CountryDto = Omit<Country, 'fitAltitude' | 'exchangeRateUnit' | 'specialAdvisory' | 'bigMac'> & {
   specialAdvisory?: string | null;
   bigMac?: number | null;
+  unit?: number | null;
 };
 
 // VITE_API_BASE_URL 미설정 시(목업 단계)에는 목업 데이터를 그대로 반환한다.
@@ -27,13 +28,10 @@ export async function fetchCountries(): Promise<Country[]> {
   const res = await fetch(`${API_BASE_URL}/countries`);
   if (!res.ok) throw new Error(`GET /countries failed: ${res.status}`);
   const rows = (await res.json()) as CountryDto[];
-  // 백엔드(backend/src/routes/countries.js)는 아직 exchangeRateUnit(환율 고시 단위,
-  // 예: JPY는 100)을 내려주지 않고 이미 1단위 기준으로 나눈 exchangeRate만 보낸다.
-  // 숫자 자체는 맞으므로 단위는 1로 고정해두고, 백엔드가 unit 필드를 추가하면 그대로 반영한다.
-  return rows.map((row) => ({
+  return rows.map(({ unit, ...row }) => ({
     ...row,
     fitAltitude: FALLBACK_FIT_ALTITUDE,
-    exchangeRateUnit: 1,
+    exchangeRateUnit: unit ?? 1,
     specialAdvisory: row.specialAdvisory ?? undefined,
     bigMac: row.bigMac ?? undefined,
   }));
