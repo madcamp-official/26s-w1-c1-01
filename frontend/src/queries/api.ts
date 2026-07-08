@@ -32,8 +32,8 @@ export async function fetchCities(): Promise<City[]> {
   const res = await fetch(`${API_BASE_URL}/cities`);
   if (!res.ok) throw new Error(`GET /cities failed: ${res.status}`);
   const rows = (await res.json()) as City[];
-  // stay_price는 data-pipeline/scrapers/stay_scraper.py가 긁어온 1박 최저가를 그대로
-  // 저장한 값이라 별도 변환 없이 1박 가격으로 그대로 쓴다.
+  // stay_price는 data-pipeline/scrapers/stay_scraper.py의 docstring대로 체크인~체크아웃
+  // 7박 총액이라, 별도 변환 없이 그대로 쓴다(1박 평균은 표시 시점에 STAY_NIGHTS로 나눈다).
   return rows.map((row) => ({
     ...row,
     mealPrice: row.mealPrice != null ? mealIndexToDailyKRW(row.mealPrice) : null,

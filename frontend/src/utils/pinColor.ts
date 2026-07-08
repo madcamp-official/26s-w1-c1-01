@@ -1,7 +1,9 @@
 import type { City, CityWithCost, CostGrade } from '../types';
 
-const STAY_NIGHTS = 8;
-// 식비는 숙박 일수(8박)가 아니라 여행 전체 일수(8박 9일 = 9일) 동안 발생한다.
+// 여행 기준: 7박 8일. data-pipeline/scrapers/stay_scraper.py·flight_scraper.py가
+// 이미 이 7박(체크인~체크아웃 7일) 기준으로 숙박/항공권을 수집하므로 프런트도 맞춘다.
+export const STAY_NIGHTS = 7;
+// 식비는 숙박 일수(7박)가 아니라 여행 전체 일수(7박 8일 = 8일) 동안 발생한다.
 const MEAL_DAYS = STAY_NIGHTS + 1;
 
 export const GRADE_COLOR: Record<CostGrade | 'GRAY', string> = {
@@ -33,7 +35,8 @@ function computeTotalCost(city: City): number | null {
   if (city.mealPrice == null || city.flightPrice == null || city.stayPrice == null) {
     return null;
   }
-  return city.mealPrice * MEAL_DAYS + city.flightPrice + city.stayPrice * STAY_NIGHTS;
+  // stayPrice는 이미 7박 총액(백엔드가 그대로 내려주는 값)이라 추가로 곱하지 않는다.
+  return city.mealPrice * MEAL_DAYS + city.flightPrice + city.stayPrice;
 }
 
 /**

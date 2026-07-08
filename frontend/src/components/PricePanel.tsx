@@ -1,5 +1,5 @@
 import type { CityWithCost, Country } from '../types';
-import { GRADE_COLOR, GRADE_LABEL, GRADE_SYMBOL } from '../utils/pinColor';
+import { GRADE_COLOR, GRADE_LABEL, GRADE_SYMBOL, STAY_NIGHTS } from '../utils/pinColor';
 import { formatKRW } from '../utils/format';
 import { useAppStore } from '../store/useAppStore';
 
@@ -47,7 +47,9 @@ export default function PricePanel({ city, country }: PricePanelProps) {
             </div>
             <div className="flex justify-between text-sm">
               <dt className="text-white/60">숙박 (1박 가격)</dt>
-              <dd className="m-0 font-semibold">{formatKRW(city.stayPrice)}</dd>
+              <dd className="m-0 font-semibold">
+                {formatKRW(city.stayPrice != null ? Math.round(city.stayPrice / STAY_NIGHTS) : null)}
+              </dd>
             </div>
             <div className="flex justify-between text-sm">
               <dt className="text-white/60">항공 (왕복 최저가)</dt>
@@ -55,7 +57,7 @@ export default function PricePanel({ city, country }: PricePanelProps) {
             </div>
           </dl>
           <div className="mb-4 flex items-baseline justify-between border-t border-white/10 pt-3 text-sm text-white/70">
-            <span>총 예상 비용 (8박 9일)</span>
+            <span>총 예상 비용 (7박 8일)</span>
             <strong className="text-lg text-white">{formatKRW(city.totalCost)}</strong>
           </div>
           <button

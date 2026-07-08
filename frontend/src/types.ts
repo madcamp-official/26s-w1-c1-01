@@ -35,12 +35,12 @@ export interface City {
   mealPrice: number | null;
   /** 왕복 항공권 최저가 (KRW) — City.Flight_Price */
   flightPrice: number | null;
-  /** 1박 숙박비 (KRW) — City.Stay_Price */
+  /** 7박 숙박 총액 (KRW) — City.Stay_Price */
   stayPrice: number | null;
   updatedAt: string;
 }
 
 export interface CityWithCost extends City {
-  totalCost: number | null; // mealPrice*9(8박 9일) + flightPrice + stayPrice*8(1박 가격 * 숙박일수)
+  totalCost: number | null; // mealPrice*8(7박 8일) + flightPrice + stayPrice(7박 총액)
   pinColor: CostGrade | 'GRAY'; // City.Pin_Color
 }
