@@ -247,7 +247,7 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 
 > 접속 가능한 링크는 배포 후 이 섹션에 채워 넣는다.
 
-- **서비스 URL:** http://www.nomadlist.madcamp-kaist.org/
+- **서비스 URL:** [http://www.nomadlist.madcamp-kaist.org/](https://nomadlist.madcamp-kaist.org/)
 - **실행 방법:** [시작하기](#시작하기) 참고 (`./run_docker.sh`)
 
 ---
