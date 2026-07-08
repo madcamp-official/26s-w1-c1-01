@@ -8,9 +8,10 @@ data/processed/airports.csv(openflights 'To' 기준 ICN 취항 공항)에 등장
 - 국가명(한글/영문), ISO 3166-1 alpha-2: 외교부_국가_지역별 표준코드
   (airports.csv의 국가 표기가 다른 5개국은 COUNTRY_ALIASES로 보정)
 - 지도 중심 좌표(center_lat/center_lng): average-latitude-longitude-countries.csv
-- currency_code: exchange_rates.csv(수출입은행, 23개 주요 통화)만 커버한다.
-  CURRENCY_ISSUER/EUROZONE에 없는 통화를 쓰는 국가(캄보디아, 베트남, 러시아,
-  대만, 인도 등)는 currency_code를 NULL로 두고 이후 통화 데이터가 보강되면 채운다.
+- currency_code: exchange_rates.csv(finance.naver.com/marketindex/exchangeDetail.naver,
+  scrapers/exchange_rate_scraper.py 참고)가 커버하는 통화만 매핑한다. 라오스(LAK)처럼
+  네이버에 marketindexCd 자체가 없는 통화를 쓰는 국가는 currency_code를 NULL로 두고
+  이후 통화 데이터가 보강되면 채운다.
 - alarm_level/special_advisory: scrapers/travel_alarm_scraper.py가 만든
   data/processed/travel_alarm.csv가 있으면 병합하고, 없으면 기본값(0, NULL)을 쓴다.
   이 스크래퍼는 국가를 ISO 3166-1 alpha-3(iso_code)로 식별하므로, 외교부
@@ -45,10 +46,14 @@ EUROZONE = ["AT", "BE", "HR", "CY", "EE", "FI", "FR", "DE", "GR", "IE",
 
 CURRENCY_ISSUER = {
     "AED": "AE", "AUD": "AU", "BHD": "BH", "BND": "BN", "CAD": "CA",
-    "CHF": "CH", "CNH": "CN", "DKK": "DK", "GBP": "GB", "HKD": "HK",
-    "IDR": "ID", "JPY": "JP", "KRW": "KR", "KWD": "KW", "MYR": "MY",
-    "NOK": "NO", "NZD": "NZ", "SAR": "SA", "SEK": "SE", "SGD": "SG",
-    "THB": "TH", "USD": "US",
+    "CHF": "CH", "CNY": "CN", "CZK": "CZ", "DKK": "DK", "FJD": "FJ",
+    "GBP": "GB", "HKD": "HK", "IDR": "ID", "ILS": "IL", "INR": "IN",
+    "JPY": "JP", "KES": "KE", "KHR": "KH", "KRW": "KR", "KWD": "KW",
+    "KZT": "KZ", "LKR": "LK", "MMK": "MM", "MNT": "MN", "MOP": "MO",
+    "MYR": "MY", "NOK": "NO", "NPR": "NP", "NZD": "NZ", "PHP": "PH",
+    "QAR": "QA", "RUB": "RU", "SAR": "SA", "SEK": "SE", "SGD": "SG",
+    "THB": "TH", "TRY": "TR", "TWD": "TW", "USD": "US", "UZS": "UZ",
+    "VND": "VN",
 }
 
 
