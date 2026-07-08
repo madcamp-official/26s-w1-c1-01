@@ -16,7 +16,7 @@ export default function PricePanel({ city, country }: PricePanelProps) {
   return (
     <div className="absolute bottom-7 left-7 z-10 w-[min(340px,calc(100vw-56px))] rounded-2xl border border-white/10 bg-[#14161e]/90 p-5 shadow-2xl backdrop-blur-lg max-[768px]:inset-x-4 max-[768px]:bottom-4 max-[768px]:w-auto">
       <button
-        className="absolute right-1.5 top-1.5 border-none bg-transparent p-1 text-lg leading-none text-white/50"
+        className="absolute -right-1 -top-1 flex h-8 w-8 items-center justify-center border-none bg-transparent text-xl leading-none text-white/50 hover:text-white"
         onClick={clearSelection}
         aria-label="닫기"
       >

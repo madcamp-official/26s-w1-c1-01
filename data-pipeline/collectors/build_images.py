@@ -2,12 +2,16 @@
 cities/countries의 대표 이미지(image_url)를 채워 넣는 배치.
 
 프런트(CityDetailPanel.tsx 등)가 지금 picsum.photos 랜덤 플레이스홀더로 때우고 있는
-대표 사진을 실제 사진으로 교체하기 위한 것. 이미지 소스 우선순위:
-  1. Pexels API(PEXELS_API_KEY 있을 때) - 화질 좋은 여행/도시 사진, 검색 매칭 우수하지만
-     API 키 발급 및 저작자 표시(image_credit)가 필요
-  2. Wikipedia REST API(summary) - API 키 불필요, 실제 그 도시/국가 랜드마크 사진이지만
-     소도시는 이미지가 없거나 화질이 낮을 수 있음
-둘 다 실패하면 해당 행은 건너뛰고(기존 값 유지) 경고만 출력한다.
+대표 사진을 실제 사진/국기로 교체하기 위한 것. 도시와 국가는 이미지 성격이 다르다:
+  - 도시(cities): 실제 스카이라인/랜드마크 사진. 소스 우선순위는
+    1) Pexels API(PEXELS_API_KEY 있을 때) - 화질 좋은 여행 사진, API 키/저작자
+       표시(image_credit) 필요
+    2) Wikipedia REST API(summary) - API 키 불필요하지만 국기/지도 등 사진이 아닌
+       이미지가 섞여 있어 is_bad_wikipedia_image로 걸러내고 검색 폴백을 탄다
+  - 국가(countries): 국기(디자인 결정) - update_countries 참고. 위키피디아 국가
+    문서 인포박스가 거의 항상 국기라 그걸 그대로 쓴다(is_bad_wikipedia_image 필터
+    미적용).
+둘 다 이미지를 못 찾으면 해당 행은 건너뛰고(기존 값 유지) 경고만 출력한다.
 
 image_url/image_credit 컬럼이 아직 없는 기존 DB를 위해 이 스크립트가 직접
 ALTER TABLE ... ADD COLUMN IF NOT EXISTS를 실행한다(다른 collector의
@@ -45,9 +49,10 @@ REQUEST_SLEEP_SEC = 0.3
 MAX_WIKIPEDIA_RETRIES = 2
 MAX_RETRY_WAIT_SEC = 60
 
-# 위키피디아 국가 문서는 인포박스 대표 이미지로 실제 풍경 사진 대신 국기/문장/지도를
-# 쓰는 경우가 압도적으로 많다(예: "Japan", "France", "Guam" 문서 전부 국기 SVG였음).
+# 도시 이미지용 필터. 위키피디아 문서 인포박스가 실제 풍경 사진 대신 국기/문장/지도를
+# 대표 이미지로 쓰는 경우가 있다(홍콩/싱가포르/마카오/괌처럼 국가=도시인 경우 등).
 # 파일명에 이런 패턴이 있으면 "이미지 없음"과 동일하게 취급해 검색 폴백으로 넘긴다.
+# (국가 이미지는 국기를 의도적으로 쓰므로 update_countries에서는 이 필터를 끈다.)
 BAD_IMAGE_URL_KEYWORDS = [
     "flag_of", "flag of", "coat_of_arms", "coat of arms", "emblem_of", "emblem of",
     "seal_of", "seal of", "locator", "map", ".svg",
@@ -60,25 +65,14 @@ def is_bad_wikipedia_image(url):
 
 
 # countries.name_en은 외교부 표준코드 국문/영문 매핑용 표기라 위키피디아 문서 제목과
-# 다른 경우가 있다(예: "Czech"는 국가가 아니라 동명이의 문서로 빠지고,
-# "United Arab Emirates : UAE"는 콜론이 들어가 있어 URL 자체가 깨진다).
-# 그 외 항목들은 국가 문서 자체가 국기 이미지라 "{국가} tourism" 검색 폴백으로도 여전히
-# 국기/로고로 돌아오거나(자기 자신으로 재검색되거나 관광청 로고 SVG로 빠짐) 이미지가
-# 아예 없는 문서로 가서, 잘 알려진 랜드마크/도시 문서를 직접 지정해야 하는 경우다.
+# 다른 경우가 있다(예: "Czech"는 국가가 아니라 동명이의 문서로 빠지고, 이미지 자체가
+# 없는 disambiguation 문서라 국기조차 못 건짐. "United Arab Emirates : UAE"는 콜론이
+# 들어가 있어 URL 자체가 깨진다). 국가 이미지는 의도적으로 국기를 쓰므로(아래
+# update_countries 참고) is_bad_wikipedia_image 필터를 적용하지 않고, 이 두 건만
+# 문서 제목 자체를 못 찾는 문제를 보정한다.
 COUNTRY_WIKI_TITLE_OVERRIDES = {
     "AE": "United Arab Emirates",
     "CZ": "Czech Republic",
-    "GU": "Tumon, Guam",
-    "MP": "Saipan, Northern Mariana Islands",
-    "PW": "Rock Islands",
-    "HK": "Victoria Harbour",
-    "SG": "Marina Bay, Singapore",
-    "MO": "Macau Tower",
-    "FJ": "Mamanuca Islands",
-    "IN": "Taj Mahal",
-    "MY": "Kuala Lumpur",
-    "QA": "Doha",
-    "TR": "Hagia Sophia",
 }
 
 # cities.name_en으로 찾은 위키피디아 문서가 도시 사진이 아닌 엉뚱한 이미지를 내려주는
@@ -154,7 +148,7 @@ def search_wikipedia_title(query):
         return None
 
 
-def fetch_wikipedia_summary(title):
+def fetch_wikipedia_summary(title, reject_bad_images=True):
     url = WIKIPEDIA_SUMMARY_URL.format(title=quote(title.replace(" ", "_")))
 
     for attempt in range(MAX_WIKIPEDIA_RETRIES + 1):
@@ -178,7 +172,7 @@ def fetch_wikipedia_summary(title):
 
         data = res.json()
         image = data.get("originalimage") or data.get("thumbnail")
-        if not image or is_bad_wikipedia_image(image["source"]):
+        if not image or (reject_bad_images and is_bad_wikipedia_image(image["source"])):
             return None
         return {
             "image_url": image["source"],
@@ -188,8 +182,8 @@ def fetch_wikipedia_summary(title):
     return None
 
 
-def fetch_from_wikipedia(title, search_hint=None):
-    result = fetch_wikipedia_summary(title)
+def fetch_from_wikipedia(title, search_hint=None, reject_bad_images=True):
+    result = fetch_wikipedia_summary(title, reject_bad_images=reject_bad_images)
     if result:
         return result
 
@@ -201,7 +195,7 @@ def fetch_from_wikipedia(title, search_hint=None):
         return None
 
     time.sleep(REQUEST_SLEEP_SEC)
-    return fetch_wikipedia_summary(resolved_title)
+    return fetch_wikipedia_summary(resolved_title, reject_bad_images=reject_bad_images)
 
 
 def fetch_image(pexels_query, wiki_title, wiki_search_hint=None):
@@ -240,6 +234,11 @@ def update_cities(conn):
 
 
 def update_countries(conn):
+    """국가 이미지는 랜드마크 사진이 아니라 국기를 쓴다(디자인 결정) - 위키피디아
+    국가 문서의 인포박스 이미지가 거의 항상 국기라, Pexels/사진 검색 없이 위키피디아
+    문서를 그대로 받아 쓰되 국기 이미지를 걸러내는 is_bad_wikipedia_image 필터만
+    끈다.
+    """
     with conn.cursor() as cur:
         cur.execute("SELECT country_id, name_en FROM countries WHERE image_url IS NULL ORDER BY country_id")
         rows = cur.fetchall()
@@ -248,7 +247,7 @@ def update_countries(conn):
     with conn.cursor() as cur:
         for country_id, name_en in rows:
             wiki_title = COUNTRY_WIKI_TITLE_OVERRIDES.get(country_id, name_en)
-            result = fetch_image(f"{name_en} landmark", wiki_title, wiki_search_hint=f"{name_en} tourism")
+            result = fetch_from_wikipedia(wiki_title, search_hint=f"{name_en} country", reject_bad_images=False)
             time.sleep(REQUEST_SLEEP_SEC)
             if not result:
                 print(f"경고: 이미지 못 찾음 - country {country_id}({name_en})")

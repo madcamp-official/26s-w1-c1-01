@@ -58,7 +58,7 @@ export default function CountryDetailPanel({ country }: CountryDetailPanelProps)
             <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm text-white/60">환율</span>
               <strong className="text-sm text-white">
-                {country.currencyCode != null && country.exchangeRate != null
+                {country.currencyCode != null && country.exchangeRate != null && country.nameKo !== '라오스'
                   ? formatExchangeRate(country.exchangeRateUnit, country.exchangeRate, country.currencyCode)
                   : '정보 없음'}
               </strong>
