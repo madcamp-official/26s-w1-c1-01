@@ -1,6 +1,6 @@
 import type { City, CityWithCost, CostGrade } from '../types';
 
-export const STAY_NIGHTS = 8;
+const STAY_NIGHTS = 8;
 // 식비는 숙박 일수(8박)가 아니라 여행 전체 일수(8박 9일 = 9일) 동안 발생한다.
 const MEAL_DAYS = STAY_NIGHTS + 1;
 

@@ -46,7 +46,7 @@ export default function PricePanel({ city, country }: PricePanelProps) {
               <dd className="m-0 font-semibold">{formatKRW(city.mealPrice)}</dd>
             </div>
             <div className="flex justify-between text-sm">
-              <dt className="text-white/60">숙박 (8박 총액)</dt>
+              <dt className="text-white/60">숙박 (1박 가격)</dt>
               <dd className="m-0 font-semibold">{formatKRW(city.stayPrice)}</dd>
             </div>
             <div className="flex justify-between text-sm">

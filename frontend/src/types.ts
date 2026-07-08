@@ -35,7 +35,7 @@ export interface City {
   mealPrice: number | null;
   /** 왕복 항공권 최저가 (KRW) — City.Flight_Price */
   flightPrice: number | null;
-  /** 8박 숙박 총액 (KRW) — City.Stay_Price */
+  /** 1박 숙박비 (KRW) — City.Stay_Price */
   stayPrice: number | null;
   updatedAt: string;
 }
