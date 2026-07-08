@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #05060a;
+    color: #f3f4f6;
+    overflow: hidden;
+    font-family: 'Pretendard', system-ui, 'Segoe UI', Roboto, sans-serif;
+    /* 트랙패드 핀치/두 손가락 확대가 브라우저 페이지 줌으로 새지 않게 막는다.
+       지구본 확대는 전적으로 react-globe.gl의 OrbitControls가 담당해야 한다. */
+    touch-action: none;
+    overscroll-behavior: none;
+    /* 지구본을 드래그로 회전시킬 때 포인터가 헤더/핀 라벨 등 텍스트 위를 지나가면
+       브라우저 기본 텍스트 선택(파란 하이라이트)이 걸린다. 검색창 <input>은 이 규칙의
+       영향을 받지 않고 계속 정상적으로 선택/편집 가능하다(폼 컨트롤은 브라우저가 별도 처리). */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

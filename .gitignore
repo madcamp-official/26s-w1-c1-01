@@ -1,6 +1,24 @@
 # Dependencies
 node_modules/
 
+# Frontend build output
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.claude
+.DS_Store
+
 # Env files
 .env
 .env.local
@@ -17,6 +35,5 @@ data-pipeline/seeds/airportal_code.csv
 data-pipeline/seeds/bigmac_index.csv
 data-pipeline/data/README.md
 
-.DS_Store
 .mcp.json
 
