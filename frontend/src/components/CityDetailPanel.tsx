@@ -115,6 +115,9 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
               </span>
             </div>
             <p className="m-0 mb-3 text-sm leading-relaxed text-white/70">{alarm.description}</p>
+            <p className="m-0 mb-3 text-xs leading-relaxed text-white/40">
+              국가 단위로 표시되는 경보이며, 실제로는 국가 내 특정 지역에만 해당하는 경우가 있습니다. 자세한 지역별 기준은 외교부 해외안전여행 웹사이트에서 확인하세요.
+            </p>
 
             {country?.specialAdvisory && (
               <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
