@@ -1,6 +1,8 @@
 import type { City, CityWithCost, CostGrade } from '../types';
 
 const STAY_NIGHTS = 8;
+// 식비는 숙박 일수(8박)가 아니라 여행 전체 일수(8박 9일 = 9일) 동안 발생한다.
+const MEAL_DAYS = STAY_NIGHTS + 1;
 
 export const GRADE_COLOR: Record<CostGrade | 'GRAY', string> = {
   LOW: '#22c55e',
@@ -31,7 +33,7 @@ function computeTotalCost(city: City): number | null {
   if (city.mealPrice == null || city.flightPrice == null || city.stayPrice == null) {
     return null;
   }
-  return city.mealPrice * STAY_NIGHTS + city.flightPrice + city.stayPrice;
+  return city.mealPrice * MEAL_DAYS + city.flightPrice + city.stayPrice;
 }
 
 /**

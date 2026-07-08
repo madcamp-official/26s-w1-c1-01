@@ -41,6 +41,6 @@ export interface City {
 }
 
 export interface CityWithCost extends City {
-  totalCost: number | null; // mealPrice*8 + flightPrice + stayPrice
+  totalCost: number | null; // mealPrice*9(8박 9일) + flightPrice + stayPrice
   pinColor: CostGrade | 'GRAY'; // City.Pin_Color
 }
