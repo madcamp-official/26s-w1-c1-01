@@ -33,7 +33,7 @@ function computeTotalCost(city: City): number | null {
   if (city.mealPrice == null || city.flightPrice == null || city.stayPrice == null) {
     return null;
   }
-  return city.mealPrice * MEAL_DAYS + city.flightPrice + city.stayPrice;
+  return city.mealPrice * MEAL_DAYS + city.flightPrice + city.stayPrice * STAY_NIGHTS;
 }
 
 /**
