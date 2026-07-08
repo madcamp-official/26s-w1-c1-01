@@ -18,3 +18,8 @@ services:
       - backend
     ports:
       - "5173:80"
+
+networks:
+  default:
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
