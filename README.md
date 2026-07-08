@@ -16,7 +16,7 @@
 <table>
   <tr>
     <td align="center">
-      <img src="img/유나연.jpeg" width="120" height="120" alt="유영석" style="border-radius:50%; object-fit:cover;" /><br />
+      <img src="img/Nupjuk.jpg" width="120" height="120" alt="유영석" style="border-radius:50%; object-fit:cover;" /><br />
       <b>유영석</b><br />
       <a href="https://github.com/yskstuff">@yskstuff</a><br />
       개발자
