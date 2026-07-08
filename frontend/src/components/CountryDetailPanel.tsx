@@ -1,14 +1,11 @@
-import type { CityWithCost, Country } from '../types';
+import type { Country } from '../types';
 import { formatKRW } from '../utils/format';
 import { useAppStore } from '../store/useAppStore';
 import { ALARM_INFO, KOREA_BIGMAC_KRW } from '../utils/travelAdvisory';
 
-interface CityDetailPanelProps {
-  city: CityWithCost;
-  country: Country | undefined;
+interface CountryDetailPanelProps {
+  country: Country;
 }
-
-
 
 // 환율 고시 단위(예: JPY(100), VND(1,000))는 통화별 스케일 차이가 커서 프런트가
 // 추측(자릿수 기준 반올림)하지 않고 백엔드가 내려준 exchangeRateUnit을 그대로 쓴다.
@@ -16,11 +13,11 @@ function formatExchangeRate(unit: number, rate: number, currencyCode: string) {
   return `${unit.toLocaleString('ko-KR')} ${currencyCode} = ${formatKRW(rate)}`;
 }
 
-export default function CityDetailPanel({ city, country }: CityDetailPanelProps) {
+export default function CountryDetailPanel({ country }: CountryDetailPanelProps) {
   const closeDetail = useAppStore((s) => s.closeDetail);
 
-  const alarm = ALARM_INFO[country?.alarmLevel ?? 0];
-  const bigMac = country?.bigMac;
+  const alarm = ALARM_INFO[country.alarmLevel ?? 0];
+  const bigMac = country.bigMac;
   const bigMacDiffPct = bigMac != null ? Math.round(((bigMac - KOREA_BIGMAC_KRW) / KOREA_BIGMAC_KRW) * 100) : null;
 
   return (
@@ -31,8 +28,8 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
 
         <div className="relative">
           <img
-            src={`https://picsum.photos/seed/${city.cityId}/640/360`}
-            alt={`${city.nameKo} 대표 이미지`}
+            src={`https://picsum.photos/seed/${country.countryId}/640/360`}
+            alt={`${country.nameKo} 대표 이미지`}
             className="h-64 w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#14161e] via-transparent to-transparent" />
@@ -44,9 +41,9 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
             ×
           </button>
           <div className="absolute bottom-2 left-5">
-            <h3 className="m-0 text-xl font-bold text-white drop-shadow">{city.nameKo}</h3>
+            <h3 className="m-0 text-xl font-bold text-white drop-shadow">{country.nameKo}</h3>
             <p className="m-0 text-xs text-white/70">
-              {country?.nameKo ?? city.countryId} · {city.nameEn}
+              {country.nameEn}
             </p>
           </div>
         </div>
@@ -58,9 +55,7 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
             <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm text-white/60">환율</span>
               <strong className="text-sm text-white">
-                {country
-                  ? formatExchangeRate(country.exchangeRateUnit, country.exchangeRate, country.currencyCode)
-                  : '정보 없음'}
+                {formatExchangeRate(country.exchangeRateUnit, country.exchangeRate, country.currencyCode)}
               </strong>
             </div>
             <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
@@ -88,7 +83,7 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
           {/* 외교부 여행경보 */}
           <section>
             <h4 className="mb-3 text-sm font-bold text-white/90">
-              {country?.nameKo ?? city.countryId} 여행경보 <span className="text-xs font-normal text-white/50">(외교부 국가 단위 기준)</span>
+              {country.nameKo} 여행경보 <span className="text-xs font-normal text-white/50">(외교부 국가 단위 기준)</span>
             </h4>
             <div className="mb-3 flex items-center gap-2">
               <span
@@ -103,7 +98,7 @@ export default function CityDetailPanel({ city, country }: CityDetailPanelProps)
               국가 내 가장 높은 경보 단계를 대표로 표시합니다. 지역별 상세 경보는 외교부 해외안전여행 웹사이트를 참고하세요.
             </p>
 
-            {country?.specialAdvisory && (
+            {country.specialAdvisory && (
               <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
                 <p className="m-0 mb-1 text-xs font-bold text-red-400">⚠ 특별여행주의보 발령 중</p>
                 <p className="m-0 text-xs leading-relaxed text-white/80">{country.specialAdvisory}</p>

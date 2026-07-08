@@ -3,6 +3,7 @@ import GlobeView from './components/GlobeView';
 import SearchBar from './components/SearchBar';
 import PricePanel from './components/PricePanel';
 import CityDetailPanel from './components/CityDetailPanel';
+import CountryDetailPanel from './components/CountryDetailPanel';
 import RecommendQuiz from './components/RecommendQuiz';
 import HelpPanel from './components/HelpPanel';
 import { useCitiesData, useCountriesData } from './queries/useCitiesData';
@@ -142,11 +143,28 @@ function App() {
           )}
           {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
 
-          {selectedCountry && !selectedCity && (
-            <div className="absolute left-7 top-24 z-10 flex flex-col rounded-2xl border border-white/10 bg-[#14161e]/75 px-5 py-3 backdrop-blur-md">
+          {selectedCountry && !selectedCity && !detailOpen && (
+            <div className="absolute left-7 top-24 z-10 flex flex-col rounded-2xl border border-white/10 bg-[#14161e]/75 px-5 py-3 pr-10 backdrop-blur-md">
+              <button
+                className="absolute right-2 top-2 border-none bg-transparent p-1 text-lg leading-none text-white/50 hover:text-white"
+                onClick={() => useAppStore.getState().clearSelection()}
+                aria-label="닫기"
+              >
+                ×
+              </button>
               <span className="text-lg font-bold text-white">{selectedCountry.nameKo}</span>
               <span className="text-xs text-white/50">{selectedCountry.nameEn}</span>
+              <button
+                className="mt-2.5 rounded-lg bg-sky-300 py-1.5 px-3 text-xs font-bold text-[#05060a] transition-colors hover:bg-sky-200"
+                onClick={() => useAppStore.getState().openDetail()}
+              >
+                자세한 정보
+              </button>
             </div>
+          )}
+
+          {selectedCountry && !selectedCity && detailOpen && (
+            <CountryDetailPanel country={selectedCountry} />
           )}
 
           {selectedCity && <PricePanel city={selectedCity} country={selectedCountry} />}

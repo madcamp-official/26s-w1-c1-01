@@ -154,7 +154,7 @@ function HelpItemCard({ item }: { item: HelpItem }) {
       )}
       <div className="flex-1 flex flex-col justify-center">
         <dt className="mb-1.5 text-sm font-bold text-sky-300">{item.label}</dt>
-        <dd className="m-0 text-xs leading-relaxed text-white/70">{item.body}</dd>
+        <dd className="m-0 break-keep text-xs leading-relaxed text-white/70">{item.body}</dd>
       </div>
     </div>
   );
@@ -172,7 +172,7 @@ export default function HelpPanel({ onClose }: HelpPanelProps) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative max-h-[92vh] w-full max-w-[960px] overflow-y-auto rounded-2xl border border-white/10 bg-[#14161e] p-6 shadow-2xl sm:p-8">
+      <div className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-white/10 bg-[#14161e] p-6 shadow-2xl sm:p-8">
         <button
           className="absolute right-4 top-4 border-none bg-transparent text-xl leading-none text-white/50"
           onClick={onClose}
