@@ -1,5 +1,6 @@
 import { cities, countries } from '../data/mockData';
 import type { City, Country } from '../types';
+import { STAY_NIGHTS } from '../utils/pinColor';
 
 // 백엔드 주소. .env(.env.local 등)에 VITE_API_BASE_URL을 설정하면 활성화된다.
 // 예: VITE_API_BASE_URL=http://localhost:8080
@@ -20,6 +21,14 @@ function mealIndexToDailyKRW(mealPriceIndex: number): number {
   return Math.round((mealPriceIndex / 100) * MEAL_BASELINE_KRW_PER_MEAL * MEALS_PER_DAY);
 }
 
+// 백엔드(data-pipeline/scrapers/stay_scraper.py)가 hotels.naver.com에서 긁어오는
+// 가격은 검색 결과 카드에 뜨는 "OO,OOO원~" 1박 최저가다(체크인/체크아웃 7일 창은
+// 조회용일 뿐 요금 자체는 1박 기준). DB의 stay_price도 이 값을 그대로 저장하므로,
+// 프런트가 기대하는 "8박 총액"으로 만들려면 여기서 여행 박수를 곱해야 한다.
+function nightlyToStayTotalKRW(nightlyPrice: number): number {
+  return nightlyPrice * STAY_NIGHTS;
+}
+
 type CountryDto = Omit<Country, 'fitAltitude' | 'exchangeRateUnit' | 'specialAdvisory' | 'bigMac'> & {
   specialAdvisory?: string | null;
   bigMac?: number | null;
@@ -35,6 +44,7 @@ export async function fetchCities(): Promise<City[]> {
   return rows.map((row) => ({
     ...row,
     mealPrice: row.mealPrice != null ? mealIndexToDailyKRW(row.mealPrice) : null,
+    stayPrice: row.stayPrice != null ? nightlyToStayTotalKRW(row.stayPrice) : null,
   }));
 }
 
