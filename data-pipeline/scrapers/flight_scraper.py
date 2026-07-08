@@ -24,10 +24,12 @@ import time
 from datetime import datetime, timedelta
 
 import pandas as pd
-import psycopg2
 from dotenv import load_dotenv
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
+
+from _db import get_connection
+from _parallel_runner import SCRAPE_DELAY_RANGE, run_sequential_or_parallel
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, "../.env"))
@@ -49,17 +51,15 @@ FIELDNAMES = ["city_id", "scrape_date", "depart_date", "return_date", "price", "
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-def load_destinations():
-    if not DB_URL:
-        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
-
-    conn = psycopg2.connect(DB_URL)
+def load_destinations(conn=None):
+    connection, owns_conn = get_connection(DB_URL, conn)
     try:
-        with conn.cursor() as cur:
+        with connection.cursor() as cur:
             cur.execute("SELECT city_id FROM cities WHERE city_id != %s ORDER BY city_id", (ORIGIN,))
             return [row[0] for row in cur.fetchall()]
     finally:
-        conn.close()
+        if owns_conn:
+            connection.close()
 
 
 def get_search_dates():
@@ -96,29 +96,16 @@ def scrape_lowest_price(page, dest, depart_date, return_date):
     return best_price, best_airline, url
 
 
-def main(city_id=None):
-    """city_id를 주면 해당 목적지 하나만, 없으면 전체 목적지를 스크래핑한다.
+def _scrape_destinations(destinations, depart_date, return_date, scrape_date):
+    """destinations 목록 하나를 브라우저 하나로 순차 스크랩해 rows 리스트를 반환한다.
 
-    반환값은 FIELDNAMES 컬럼을 가진 DataFrame이며, build_flights.main(df)로 그대로 넘긴다.
+    main()은 이 함수를 destinations 전체에 대해 한 번만 호출하고, main_parallel()은
+    destinations를 나눠 이 함수를 프로세스마다 하나씩 동시에 돌린다.
     """
-    destinations = load_destinations()
-    if city_id:
-        if city_id not in destinations:
-            raise ValueError(f"알 수 없는 목적지 코드: {city_id}")
-        destinations = [city_id]
-
-    scrape_date = datetime.now().strftime("%Y-%m-%d")
-    depart_date, return_date = get_search_dates()
     depart_iso = datetime.strptime(depart_date, "%Y%m%d").date().isoformat()
     return_iso = datetime.strptime(return_date, "%Y%m%d").date().isoformat()
 
-    logging.info(
-        f"ICN 출발 {len(destinations)}개 목적지 항공권 최저가 스크래핑 시작 "
-        f"({depart_iso} ~ {return_iso})"
-    )
-
     rows = []
-    success_count = fail_count = 0
 
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome", headless=True)
@@ -144,19 +131,24 @@ def main(city_id=None):
             })
 
             if price:
-                success_count += 1
                 logging.info(f"{dest}: {price:,}원 ({airline})")
             else:
-                fail_count += 1
                 logging.warning(f"{dest}: 가격을 찾지 못했습니다.")
 
-            # 봇 탐지 우회를 위한 랜덤 딜레이 (3 ~ 10초)
-            time.sleep(random.uniform(3, 10))
+            # 봇 탐지 우회를 위한 랜덤 딜레이
+            time.sleep(random.uniform(*SCRAPE_DELAY_RANGE))
 
         browser.close()
 
+    return rows
+
+
+def _finalize(rows, label="스크래핑"):
+    """rows -> DataFrame 변환, 성공/실패 로그, Top5 출력까지 main()/main_parallel() 공통 마무리."""
     df = pd.DataFrame(rows, columns=FIELDNAMES)
-    logging.info(f"스크래핑 완료. 성공 {success_count} / 실패 {fail_count}")
+    success_count = sum(1 for r in rows if r["price"])
+    fail_count = len(rows) - success_count
+    logging.info(f"{label} 완료. 성공 {success_count} / 실패 {fail_count}")
 
     valid = [r for r in rows if r["price"]]
     if valid:
@@ -166,6 +158,68 @@ def main(city_id=None):
             print(f"{r['city_id']}: {r['price']:,} 원 ({r['airline']})")
 
     return df
+
+
+def _resolve_destinations(city_id, conn=None):
+    destinations = load_destinations(conn=conn)
+    if city_id:
+        if city_id not in destinations:
+            raise ValueError(f"알 수 없는 목적지 코드: {city_id}")
+        destinations = [city_id]
+    return destinations
+
+
+def main(city_id=None, conn=None):
+    """city_id를 주면 해당 목적지 하나만, 없으면 전체 목적지를 순차로(브라우저 1개) 스크래핑한다.
+
+    반환값은 FIELDNAMES 컬럼을 가진 DataFrame이며, build_flights.main(df)로 그대로 넘긴다.
+    conn을 주면 목적지 목록 조회 시 커넥션을 재사용한다(main_batch.run_for_city 참고).
+    """
+    destinations = _resolve_destinations(city_id, conn=conn)
+    scrape_date = datetime.now().strftime("%Y-%m-%d")
+    depart_date, return_date = get_search_dates()
+    depart_iso = datetime.strptime(depart_date, "%Y%m%d").date().isoformat()
+    return_iso = datetime.strptime(return_date, "%Y%m%d").date().isoformat()
+
+    logging.info(
+        f"ICN 출발 {len(destinations)}개 목적지 항공권 최저가 스크래핑 시작 "
+        f"({depart_iso} ~ {return_iso})"
+    )
+
+    rows = _scrape_destinations(destinations, depart_date, return_date, scrape_date)
+    return _finalize(rows)
+
+
+def main_parallel(city_id=None, workers=4, conn=None):
+    """main()과 같은 일을 destinations를 workers개 프로세스로 나눠 동시에 처리한다.
+
+    프로세스마다 자기 브라우저를 하나씩 띄우고, 각 프로세스 안에서는 지금까지와 동일하게
+    목적지마다 봇 탐지 회피용 랜덤 딜레이(_parallel_runner.SCRAPE_DELAY_RANGE)를 두고
+    순차 처리한다 - 딜레이 자체를 없애는 게 아니라 그 딜레이를 여러 프로세스가 동시에
+    돌리는 방식으로 전체 시간을 줄인다.
+
+    동시에 여러 프로세스가 같은 서버 IP에서 요청을 보내므로 workers를 너무 크게 잡으면
+    차단 위험이 커진다 - 처음엔 3~5 정도로 시작해서 차단률을 보며 조절할 것.
+
+    conn을 주면 목적지 목록 조회(부모 프로세스에서 한 번만 실행)에 커넥션을 재사용한다
+    - ProcessPoolExecutor로 띄우는 워커 프로세스에는 이 conn을 넘기지 않는다(커넥션은
+    프로세스 간에 공유할 수 없음).
+    """
+    destinations = _resolve_destinations(city_id, conn=conn)
+    scrape_date = datetime.now().strftime("%Y-%m-%d")
+    depart_date, return_date = get_search_dates()
+    depart_iso = datetime.strptime(depart_date, "%Y%m%d").date().isoformat()
+    return_iso = datetime.strptime(return_date, "%Y%m%d").date().isoformat()
+
+    logging.info(
+        f"ICN 출발 {len(destinations)}개 목적지 항공권 최저가 병렬 스크래핑 시작 "
+        f"(workers={workers}, {depart_iso} ~ {return_iso})"
+    )
+
+    rows = run_sequential_or_parallel(
+        destinations, _scrape_destinations, workers, depart_date, return_date, scrape_date
+    )
+    return _finalize(rows, label="병렬 스크래핑")
 
 
 if __name__ == "__main__":
