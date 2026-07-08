@@ -28,7 +28,7 @@ export default function CountryDetailPanel({ country }: CountryDetailPanelProps)
 
         <div className="relative">
           <img
-            src={`https://picsum.photos/seed/${country.countryId}/640/360`}
+            src={country.imageUrl ?? `https://picsum.photos/seed/${country.countryId}/640/360`}
             alt={`${country.nameKo} 대표 이미지`}
             className="h-64 w-full object-cover"
           />
@@ -46,6 +46,9 @@ export default function CountryDetailPanel({ country }: CountryDetailPanelProps)
               {country.nameEn}
             </p>
           </div>
+          {country.imageCredit && (
+            <p className="absolute bottom-2 right-3 m-0 text-[10px] text-white/40">{country.imageCredit}</p>
+          )}
         </div>
 
         <div className="p-6 pt-5">
@@ -55,7 +58,9 @@ export default function CountryDetailPanel({ country }: CountryDetailPanelProps)
             <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">
               <span className="text-sm text-white/60">환율</span>
               <strong className="text-sm text-white">
-                {formatExchangeRate(country.exchangeRateUnit, country.exchangeRate, country.currencyCode)}
+                {country.currencyCode != null && country.exchangeRate != null
+                  ? formatExchangeRate(country.exchangeRateUnit, country.exchangeRate, country.currencyCode)
+                  : '정보 없음'}
               </strong>
             </div>
             <div className="mb-3 flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3">

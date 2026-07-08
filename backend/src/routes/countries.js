@@ -16,6 +16,8 @@ router.get("/", async (req, res, next) => {
         c.special_advisory,
         c.currency_code,
         c.big_mac_price,
+        c.image_url,
+        c.image_credit,
         cur.exchange_rate,
         cur.unit
       FROM countries c
@@ -44,6 +46,8 @@ function toCountryDto(row) {
     exchangeRate: row.exchange_rate != null ? Number(row.exchange_rate) : null,
     unit: row.unit != null ? Number(row.unit) : null,
     bigMac: row.big_mac_price != null ? Number(row.big_mac_price) : null,
+    imageUrl: row.image_url,
+    imageCredit: row.image_credit,
   };
 }
 

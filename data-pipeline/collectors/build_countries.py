@@ -51,6 +51,11 @@ CURRENCY_ISSUER = {
     "THB": "TH", "USD": "US",
 }
 
+# 자국 통화 없이 미국 달러를 법정통화로 그대로 쓰는 미국령/자유연합국. CURRENCY_ISSUER는
+# 통화별 "발행국" 1곳만 매핑해 US만 USD를 받고 이 지역들은 currency_code가 NULL로
+# 남았었다(괌/사이판 환율이 "1 null = -"로 표시된 원인).
+USD_USING_TERRITORIES = ["GU", "MP", "PW"]
+
 
 def build_currency_by_country(available_currency_codes):
     currency_by_country = {
@@ -60,6 +65,8 @@ def build_currency_by_country(available_currency_codes):
     }
     if "EUR" in available_currency_codes:
         currency_by_country.update({iso2: "EUR" for iso2 in EUROZONE})
+    if "USD" in available_currency_codes:
+        currency_by_country.update({iso2: "USD" for iso2 in USD_USING_TERRITORIES})
     return currency_by_country
 
 

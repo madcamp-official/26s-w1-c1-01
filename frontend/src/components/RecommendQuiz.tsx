@@ -125,7 +125,7 @@ export default function RecommendQuiz({ cities, onClose, onSelectCity }: Recomme
                 >
                   <div className="flex items-center gap-4">
                     <img
-                      src={`https://picsum.photos/seed/${city.cityId}/640/360`}
+                      src={city.imageUrl ?? `https://picsum.photos/seed/${city.cityId}/640/360`}
                       alt={`${city.nameKo} 사진`}
                       className="h-16 w-24 shrink-0 rounded-lg object-cover shadow-sm"
                     />

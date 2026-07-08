@@ -19,7 +19,7 @@ router.get("/", async (req, res, next) => {
   try {
     const { rows } = await pool.query(`
       SELECT city_id, name_ko, name_en, country_id, lat, lng,
-             meal_price, flight_price, stay_price, updated_at
+             meal_price, flight_price, stay_price, image_url, image_credit, updated_at
       FROM cities
       ORDER BY city_id
     `);
@@ -68,6 +68,8 @@ function toCityDto(row) {
     mealPrice: row.meal_price,
     flightPrice: row.flight_price,
     stayPrice: row.stay_price,
+    imageUrl: row.image_url,
+    imageCredit: row.image_credit,
     updatedAt: row.updated_at.toISOString(),
   };
 }
