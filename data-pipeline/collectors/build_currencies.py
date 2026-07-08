@@ -6,7 +6,7 @@ Supabase(Postgres) currencies 테이블을 생성/갱신한다.
 에서 받아 data-pipeline/.env의 SUPABASE_DB_URL에 넣는다. DB 자격 증명이므로
 저장소에는 절대 커밋하지 않는다(.env는 .gitignore 처리됨).
 
-테이블 스키마는 data-pipeline/data/README.md의 currencies 정의를 따른다:
+테이블 스키마는 루트 README.md "DB 스키마"의 currencies 정의를 따른다:
 currency_code(PK), currency_name, unit, exchange_rate, base_date, updated_at
 """
 
