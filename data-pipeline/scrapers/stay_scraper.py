@@ -1,12 +1,14 @@
 """
 hotels.naver.com에서 도시별 최저 숙박가(체크인~체크아웃 총액)를 스크래핑해
-data/processed/stay_prices.csv 에 원본 로그로 적재한다(README의 stay_price_scrapes와
-동일하게 매 실행마다 append하며, 실패한 도시도 price를 비워 성공률을 추적할 수 있게 남긴다).
+DataFrame으로 반환한다(README의 stay_price_scrapes와 동일한 컬럼 구성이며, 실패한
+도시도 price를 비워 성공률을 추적할 수 있게 남긴다). CSV를 거치지 않고 이 결과를
+그대로 collectors/build_stay.py에 넘겨 Supabase에 적재한다(main_batch.py 참고).
 
-대상 도시 목록은 collectors/build_cities.py가 만든 data/processed/cities.csv의
-city_id/name_ko를 그대로 쓴다. NRT/HND처럼 name_ko(예: 도쿄)가 같은 도시는 같은
-실행 안에서 실제 스크래핑을 한 번만 하고 결과를 재사용해, hotels.naver.com에 대한
-불필요한 중복 요청과 그로 인한 봇 차단 위험을 줄인다.
+대상 도시 목록은 Supabase cities 테이블에서 city_id/name_ko를 직접 읽어온다. 로컬 CSV
+스냅샷 대신 매 실행마다 DB에서 읽어와, cities 테이블이 갱신돼도 대상 목록이 바로
+따라간다. NRT/HND처럼 name_ko(예: 도쿄)가 같은 도시는 같은 실행 안에서 실제 스크래핑을
+한 번만 하고 결과를 재사용해, hotels.naver.com에 대한 불필요한 중복 요청과 그로 인한
+봇 차단 위험을 줄인다.
 
 체크인은 항상 실행 시점의 다음날, 체크아웃은 체크인으로부터 7일 후로 고정한다.
 
@@ -18,10 +20,9 @@ playwright-stealth로 자동화 흔적을 지운 뒤 진행해야 하는데, 그
 확인됐다. 가격은 페이지에 렌더링된 "OO,OOO원~" 텍스트를 정규식으로 읽는다(내부
 API가 아니라 화면에 보이는 값 그대로이므로 사이트 UI가 바뀌면 같이 깨진다).
 
-Supabase 적재는 collectors/build_stay.py가 이 CSV를 읽어서 처리한다.
+Supabase 적재는 collectors/build_stay.py가 이 DataFrame을 받아서 처리한다.
 """
 
-import csv
 import logging
 import os
 import random
@@ -31,14 +32,17 @@ import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 
+import pandas as pd
+import psycopg2
+from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from playwright_stealth import Stealth
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CITIES_CSV = os.path.join(BASE_DIR, "../data/processed/cities.csv")
-OUTPUT_CSV = os.path.join(BASE_DIR, "../data/processed/stay_prices.csv")
+load_dotenv(os.path.join(BASE_DIR, "../.env"))
+DB_URL = os.environ.get("SUPABASE_DB_URL")
 FIELDNAMES = ["city_id", "checkin", "checkout", "price", "source_url"]
 
 STAY_NIGHTS = 7
@@ -54,9 +58,17 @@ def get_hotel_dates():
 
 
 def load_cities():
-    """(city_id, name_ko) 목록을 반환한다."""
-    with open(CITIES_CSV, encoding="utf-8-sig") as f:
-        return [(row["city_id"], row["name_ko"]) for row in csv.DictReader(f)]
+    """Supabase cities 테이블에서 (city_id, name_ko) 목록을 읽어온다."""
+    if not DB_URL:
+        raise RuntimeError("SUPABASE_DB_URL이 설정되어 있지 않습니다. data-pipeline/.env를 확인하세요.")
+
+    conn = psycopg2.connect(DB_URL)
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT city_id, name_ko FROM cities ORDER BY city_id")
+            return cur.fetchall()
+    finally:
+        conn.close()
 
 
 def _get_hotel_place_id(city_name):
@@ -154,18 +166,11 @@ def scrape_lowest_hotel_price(city_name, checkin, checkout):
     return price, url
 
 
-def append_rows(rows):
-    file_exists = os.path.exists(OUTPUT_CSV)
-    os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    with open(OUTPUT_CSV, "a", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerows(rows)
-
-
 def main(city_id=None):
-    """city_id를 주면 해당 도시 하나만, 없으면 전체 도시를 스크래핑한다."""
+    """city_id를 주면 해당 도시 하나만, 없으면 전체 도시를 스크래핑한다.
+
+    반환값은 FIELDNAMES 컬럼을 가진 DataFrame이며, build_stay.main(df)로 그대로 넘긴다.
+    """
     checkin, checkout = get_hotel_dates()
     cities = load_cities()
     if city_id:
@@ -191,8 +196,8 @@ def main(city_id=None):
             "city_id": city_id,
             "checkin": checkin,
             "checkout": checkout,
-            "price": price if price else "",
-            "source_url": url or "",
+            "price": price,
+            "source_url": url,
         })
 
         if price:
@@ -202,8 +207,9 @@ def main(city_id=None):
             fail_count += 1
             logging.warning(f"{city_id}({name_ko}): 가격을 찾지 못했습니다.")
 
-    append_rows(rows)
-    logging.info(f"스크래핑 완료. 성공 {success_count} / 실패 {fail_count} -> {OUTPUT_CSV}")
+    df = pd.DataFrame(rows, columns=FIELDNAMES)
+    logging.info(f"스크래핑 완료. 성공 {success_count} / 실패 {fail_count}")
+    return df
 
 
 if __name__ == "__main__":
