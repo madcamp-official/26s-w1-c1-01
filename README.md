@@ -133,7 +133,6 @@
 
 ## 시연 영상
 
-<!-- TODO: 시연 영상 삽입 -->
 
 ---
 
@@ -352,7 +351,6 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 
 ## 배포 결과물
 
-> 접속 가능한 링크는 배포 후 이 섹션에 채워 넣는다.
 
 - **서비스 URL:** [http://nomadlist.madcamp-kaist.org/](https://nomadlist.madcamp-kaist.org/)
 - **실행 방법:** [시작하기](#시작하기) 참고 (`./run_docker.sh`)
@@ -361,7 +359,6 @@ currencies (1) ──< countries (N) ──< cities (N) ──< flight_price_scr
 
 ## 회고 문서
 
-> 개발 과정에서의 어려움, 해결 방법, 역할 분담, 다음에 개선할 점 (KPT 방법론 참고)
 
 ### Keep
 - 지구본을 활용한 서비스를 만들기를 잘한 것 같다; 직관적이면서도 원하는 기능들을 구현하기 좋았다!
