@@ -135,6 +135,7 @@
 
 ## 시연 영상
 
+<video src="img/시연영상.mp4" controls width="100%"></video>
 
 ---
 
